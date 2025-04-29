@@ -13,10 +13,12 @@ public class SimpleClient extends AbstractClient {
 		super(host, port);
 	}
 
+
+	// event bus
 	@Override
 	protected void handleMessageFromServer(Object msg) {
 		if (msg.getClass().equals(Warning.class)) {
-			EventBus.getDefault().post(new WarningEvent((Warning) msg));
+			EventBus.getDefault().post(new WarningEvent((Warning) msg)); // all the text and messages show here
 		}
 		else{
 			String message = msg.toString();
