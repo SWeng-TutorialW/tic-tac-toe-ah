@@ -25,6 +25,7 @@ public class App extends Application {
     @Override
     public void start(Stage stage) throws IOException {
     	EventBus.getDefault().register(this);
+	    // we request toask teh client to write the ip and the port, and we takes this and use it in the getclient
     	client = SimpleClient.getClient();
     	client.openConnection();
         scene = new Scene(loadFXML("primary"), 640, 480);
