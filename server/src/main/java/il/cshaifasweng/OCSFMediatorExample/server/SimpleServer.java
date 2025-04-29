@@ -1,5 +1,5 @@
 package il.cshaifasweng.OCSFMediatorExample.server;
-
+// we dont use event buse here, there is no need
 import il.cshaifasweng.OCSFMediatorExample.server.ocsf.AbstractServer;
 import il.cshaifasweng.OCSFMediatorExample.server.ocsf.ConnectionToClient;
 
@@ -12,18 +12,20 @@ import il.cshaifasweng.OCSFMediatorExample.server.ocsf.SubscribedClient;
 public class SimpleServer extends AbstractServer {
 	private static ArrayList<SubscribedClient> SubscribersList = new ArrayList<>();
 
+	// constructor
 	public SimpleServer(int port) {
-		super(port);
+		super(port); // send the port
 		
 	}
 
+	// everything from the client happens here
 	@Override
 	protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
 		String msgString = msg.toString();
 		if (msgString.startsWith("#warning")) {
 			Warning warning = new Warning("Warning from server!");
 			try {
-				client.sendToClient(warning);
+				client.sendToClient(warning); // we send the object to the client
 				System.out.format("Sent warning to client %s\n", client.getInetAddress().getHostAddress());
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -49,6 +51,8 @@ public class SimpleServer extends AbstractServer {
 			}
 		}
 	}
+
+	// send to all the clients
 	public void sendToAllClients(String message) {
 		try {
 			for (SubscribedClient subscribedClient : SubscribersList) {
