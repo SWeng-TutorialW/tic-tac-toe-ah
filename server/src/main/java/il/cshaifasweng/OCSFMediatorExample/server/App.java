@@ -12,7 +12,7 @@ public class App
 	private static SimpleServer server;
     public static void main( String[] args ) throws IOException
     {
-        server = new SimpleServer(3000); // preferd to write more than 3000 (the port) 
+        server = new SimpleServer(3000); // prefered to write more than 3000 (the port)
         server.listen(); // we write this here
     }
 }
