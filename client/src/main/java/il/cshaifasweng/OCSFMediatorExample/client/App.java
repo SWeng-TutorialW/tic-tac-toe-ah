@@ -7,9 +7,11 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.TextInputDialog;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -24,10 +26,43 @@ public class App extends Application {
 
     @Override
     public void start(Stage stage) throws IOException {
-    	EventBus.getDefault().register(this);
+
+        TextInputDialog ipDialog = new TextInputDialog("127.0.0.1");
+        ipDialog.setTitle("Server Connection");
+        ipDialog.setHeaderText("Enter Server IP Address");
+        ipDialog.setContentText("IP:");
+
+        Optional<String> ipResult = ipDialog.showAndWait();
+        if (!ipResult.isPresent()) {
+            System.out.println("No IP entered. Exiting.");
+            Platform.exit();
+            return;
+        }
+
+        TextInputDialog portDialog = new TextInputDialog("3000");
+        portDialog.setTitle("Server Connection");
+        portDialog.setHeaderText("Enter Server Port");
+        portDialog.setContentText("Port:");
+
+        Optional<String> portResult = portDialog.showAndWait();
+        if (!portResult.isPresent()) {
+            System.out.println("No port entered. Exiting.");
+            Platform.exit();
+            return;
+        }
+
+        String ip = ipResult.get();
+        int port = Integer.parseInt(portResult.get());
+
+        EventBus.getDefault().register(this);
+
+        // Create and connect the client
+        client = SimpleClient.getClient();
+        client.setHost(ip);
+        client.setPort(port);
+        client.openConnection();
+
 	    // we request toask teh client to write the ip and the port, and we takes this and use it in the getclient
-    	client = SimpleClient.getClient();
-    	client.openConnection();
         scene = new Scene(loadFXML("primary"), 640, 480);
         stage.setScene(scene);
         stage.show();

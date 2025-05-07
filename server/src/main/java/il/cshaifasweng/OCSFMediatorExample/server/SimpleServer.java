@@ -5,12 +5,18 @@ import il.cshaifasweng.OCSFMediatorExample.server.ocsf.ConnectionToClient;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import il.cshaifasweng.OCSFMediatorExample.entities.Warning;
 import il.cshaifasweng.OCSFMediatorExample.server.ocsf.SubscribedClient;
 
 public class SimpleServer extends AbstractServer {
 	private static ArrayList<SubscribedClient> SubscribersList = new ArrayList<>();
+
+	private final Map<ConnectionToClient, String> playerSymbols = new HashMap<>();
+	private boolean gameStarted = false;
+
 
 	// constructor
 	public SimpleServer(int port) {
@@ -35,6 +41,28 @@ public class SimpleServer extends AbstractServer {
 			SubscribedClient connection = new SubscribedClient(client);
 			SubscribersList.add(connection);
 			try {
+				if(playerSymbols.size() >= 2){
+					client.sendToClient("Reject");
+					client.close();
+					return;
+				}
+
+				String symbol = playerSymbols.size() == 0 ? "X" : "O";
+				playerSymbols.put(client, symbol);
+				client.sendToClient("Role:" + symbol);
+
+				if(playerSymbols.size() == 2 && !gameStarted){
+					gameStarted = true;
+					ArrayList<ConnectionToClient> players = new ArrayList<>(playerSymbols.keySet());
+					int rand = (int) (Math.random() * 2);
+					ConnectionToClient starter = players.get(rand);
+					ConnectionToClient other = players.get(1 - rand);
+
+					starter.sendToClient("TURN:YOUR");
+					other.sendToClient("TURN:WAIT");
+					System.out.println("Game started. Starter: " + playerSymbols.get(starter));
+				}
+
 				client.sendToClient("client added successfully");
 			} catch (IOException e) {
 				throw new RuntimeException(e);
@@ -48,6 +76,26 @@ public class SimpleServer extends AbstractServer {
 						break;
 					}
 				}
+			}
+		}else if (msgString.equals("reset game")) {
+			gameStarted = false;
+
+			ArrayList<ConnectionToClient> players = new ArrayList<>(playerSymbols.keySet());
+			int rand = (int) (Math.random() * 2);
+			ConnectionToClient starter = players.get(rand);
+			ConnectionToClient other = players.get(1 - rand);
+
+			try {
+				// Send reset notification
+				sendToAllClients("RESET");
+
+				// Send new turn assignment
+				starter.sendToClient("TURN:YOUR");
+				other.sendToClient("TURN:WAIT");
+
+				gameStarted = true;
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 	}
