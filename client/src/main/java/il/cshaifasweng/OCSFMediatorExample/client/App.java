@@ -52,17 +52,25 @@ public class App extends Application {
         }
 
         String ip = ipResult.get();
-        int port = Integer.parseInt(portResult.get());
+        int port;
+        try {
+            port = Integer.parseInt(portResult.get());
+        } catch (NumberFormatException e) {
+            new Alert(AlertType.ERROR, "Invalid port number.").showAndWait();
+            Platform.exit();
+            return;
+        }
 
-        EventBus.getDefault().register(this);
+        try {
+            client = SimpleClient.getClient(ip, port);
+            client.openConnection();
+        } catch (IOException e) {
+            new Alert(AlertType.ERROR, "Could not connect to server at " + ip + ":" + port).showAndWait();
+            Platform.exit();
+            return;
+        }
 
-        // Create and connect the client
-        client = SimpleClient.getClient();
-        client.setHost(ip);
-        client.setPort(port);
-        client.openConnection();
-
-	    // we request toask teh client to write the ip and the port, and we takes this and use it in the getclient
+        // we request toask teh client to write the ip and the port, and we takes this and use it in the getclient
         scene = new Scene(loadFXML("primary"), 640, 480);
         stage.setScene(scene);
         stage.show();
