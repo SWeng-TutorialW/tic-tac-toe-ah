@@ -13,9 +13,17 @@ import il.cshaifasweng.OCSFMediatorExample.server.ocsf.SubscribedClient;
 
 public class SimpleServer extends AbstractServer {
 	private static ArrayList<SubscribedClient> SubscribersList = new ArrayList<>();
+	private String[][] board = new String[3][3];
+
+
+	private final Map<ConnectionToClient, Integer> playerScores = new HashMap<>();
+
+
 
 	private final Map<ConnectionToClient, String> playerSymbols = new HashMap<>();
 	private boolean gameStarted = false;
+
+	private boolean OTurn = true;
 
 
 	// constructor
@@ -51,6 +59,9 @@ public class SimpleServer extends AbstractServer {
 				playerSymbols.put(client, symbol);
 				client.sendToClient("Role:" + symbol);
 
+				playerScores.put(client, 0);
+
+
 				if(playerSymbols.size() == 2 && !gameStarted){
 					gameStarted = true;
 					ArrayList<ConnectionToClient> players = new ArrayList<>(playerSymbols.keySet());
@@ -77,8 +88,19 @@ public class SimpleServer extends AbstractServer {
 					}
 				}
 			}
+
+			playerScores.remove(client);
+			playerSymbols.remove(client);
+
 		}else if (msgString.equals("reset game")) {
 			gameStarted = false;
+
+			// Clear the game board
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
+					board[i][j] = null;
+				}
+			}
 
 			ArrayList<ConnectionToClient> players = new ArrayList<>(playerSymbols.keySet());
 			int rand = (int) (Math.random() * 2);
@@ -97,8 +119,115 @@ public class SimpleServer extends AbstractServer {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+		}else if (msgString.startsWith("choose")) {
+			handleMove(msgString, client);
 		}
 	}
+
+	private void handleMove(String msgString, ConnectionToClient client) {
+		String[] parts = msgString.trim().split(" ");
+		int row = Integer.parseInt(parts[2]);
+		int col = Integer.parseInt(parts[3]);
+
+		if (!isPlayerTurn(client)) return;
+		if (!isCellEmpty(row, col)) return;
+
+		String playerSymbol = OTurn ? "X" : "O";
+		board[row][col] = playerSymbol;
+
+		String nextPlayer = playerSymbol.equals("X") ? "O" : "X";
+		String updateMessage = "update board " + row + " " + col + " " + playerSymbol + " Turn " + nextPlayer;
+		sendToAllClients(updateMessage);
+
+		if (checkWin()) {
+			sendToAllClients("done " + row + " " + col + " " + playerSymbol);
+
+			int currentScore = playerScores.getOrDefault(client, 0);
+			playerScores.put(client, currentScore + 1);
+
+			for (ConnectionToClient player : playerScores.keySet()) {
+				try {
+					int score = playerScores.get(player);
+					player.sendToClient("score:" + score);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}else if (isFullBoard()) {
+			sendToAllClients("over " + row + " " + col + " " + playerSymbol);
+		} else {
+			OTurn = !OTurn;
+		}
+	}
+
+
+
+	// check if a player won
+	private boolean checkWin() {
+		// Check rows
+		for (int row = 0; row < 3; row++) {
+			if (board[row][0] != null &&
+					board[row][0].equals(board[row][1]) &&
+					board[row][1].equals(board[row][2])) {
+				return true;
+			}
+		}
+
+		// Check columns
+		for (int col = 0; col < 3; col++) {
+			if (board[0][col] != null &&
+					board[0][col].equals(board[1][col]) &&
+					board[1][col].equals(board[2][col])) {
+				return true;
+			}
+		}
+
+		// Check main diagonal
+		if (board[0][0] != null &&
+				board[0][0].equals(board[1][1]) &&
+				board[1][1].equals(board[2][2])) {
+			return true;
+		}
+
+		// Check anti-diagonal
+		if (board[0][2] != null &&
+				board[0][2].equals(board[1][1]) &&
+				board[1][1].equals(board[2][0])) {
+			return true;
+		}
+
+		return false;
+	}
+
+
+
+	// check the board if its full
+	private boolean isFullBoard() {
+		for (int row = 0; row < 3; row++) {
+			for (int col = 0; col < 3; col++) {
+				if (board[row][col] == null) {
+					return false;  // found an empty cell
+				}
+			}
+		}
+		return true;  // all cells are filled
+	}
+
+
+
+	private boolean isPlayerTurn(ConnectionToClient client) {
+		String role = playerSymbols.get(client);  // "X" or "O"
+
+		if (role == null) return false;
+
+		return (OTurn && role.equals("X")) || (!OTurn && role.equals("O"));
+	}
+
+
+	private boolean isCellEmpty(int row, int col) {
+		return board[row][col] == null;
+	}
+
 
 	// send to all the clients
 	public void sendToAllClients(String message) {

@@ -15,6 +15,12 @@ public class SimpleClient extends AbstractClient {
 		super(host, port);
 	}
 
+	public static SimpleClient getClient(String host, int port) {
+		if (client == null) {
+			client = new SimpleClient(host, port);
+		}
+		return client;
+	}
 
 	// event bus
 	@Override
@@ -48,12 +54,16 @@ public class SimpleClient extends AbstractClient {
 				isMyTurn = false;  // reset turn (server will resend TURN:YOUR to the starter)
 				System.out.println("Game reset.");
 				// Notify GUI controller to clear the board
-				EventBus.getDefault().post(new ResetEvent());  // optional: custom event to trigger UI reset
+				EventBus.getDefault().post("RESET");
 			}
 
 			else if (message.equals("Reject")) {
 				System.out.println("Connection rejected by server.");
 				// Show alert or close app
+			}
+
+			else if (message.startsWith("score:")) {
+				EventBus.getDefault().post(message);  // e.g., "score:1"
 			}
 
 			else {
