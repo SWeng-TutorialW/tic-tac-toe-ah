@@ -1,5 +1,6 @@
 package il.cshaifasweng.OCSFMediatorExample.client;
 
+import javafx.application.Platform;
 import org.greenrobot.eventbus.EventBus;
 
 import il.cshaifasweng.OCSFMediatorExample.client.ocsf.AbstractClient;
@@ -37,17 +38,25 @@ public class SimpleClient extends AbstractClient {
 				System.out.println("Assigned player symbol: " + playerSymbol);
 				// Optionally post an EventBus event or update UI from GUI controller
 			}
+			else if(message.startsWith("TURN:")) {
+				Platform.runLater(() -> {
+					try {
+						PrimaryController.setWaiting(false);
+						PrimaryController.switchToSecondary();
 
-			else if (message.equals("TURN:YOUR")) {
-				isMyTurn = true;
-				System.out.println("It's your turn.");
-				// Notify UI to allow move
-			}
-
-			else if (message.equals("TURN:WAIT")) {
-				isMyTurn = false;
-				System.out.println("Waiting for opponent...");
-				// Notify UI to block input
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				});
+				 if (message.equals("TURN:YOUR")) {
+					isMyTurn = true;
+					System.out.println("It's your turn.");
+					// Notify UI to allow move
+				} else if (message.equals("TURN:WAIT")) {
+					isMyTurn = false;
+					System.out.println("Waiting for opponent...");
+					// Notify UI to block input
+				}
 			}
 
 			else if (message.equals("RESET")) {
@@ -64,9 +73,10 @@ public class SimpleClient extends AbstractClient {
 
 			else if (message.startsWith("score:")) {
 				EventBus.getDefault().post(message);  // e.g., "score:1"
-			}
+			} else if (message.startsWith("update")) {
+				EventBus.getDefault().post(message);
 
-			else {
+			} else {
 				System.out.println("Unhandled message: " + message);
 			}
 		}
