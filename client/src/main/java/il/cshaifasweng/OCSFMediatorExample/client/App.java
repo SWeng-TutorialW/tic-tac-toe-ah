@@ -74,8 +74,9 @@ public class App extends Application {
         }
 
         // we request toask teh client to write the ip and the port, and we takes this and use it in the getclient
-        scene = new Scene(loadFXML("primary"), 640, 480);
+        scene = new Scene(loadFXML("primary"), 450, 400);
         stage.setScene(scene);
+        stage.centerOnScreen();
         stage.show();
     }
 
@@ -83,12 +84,27 @@ public class App extends Application {
         scene.setRoot(loadFXML(fxml));
     }
 
+//    static void setRoot(String fxml) throws IOException {
+//        FXMLLoader loader = new FXMLLoader(App.class.getResource(fxml + ".fxml"));
+//        Parent root = loader.load();
+//        scene.setRoot(root);
+//
+//        Object controller = loader.getController();
+//
+//        if (controller instanceof SecondaryController secondaryController) {
+//            if (!EventBus.getDefault().isRegistered(secondaryController)) {
+//                EventBus.getDefault().register(secondaryController);
+//            }
+//        }
+//    }
+
+
     private static Parent loadFXML(String fxml) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(App.class.getResource(fxml + ".fxml"));
-        return fxmlLoader.load();
+        return (Parent)fxmlLoader.load();
     }
-    
-    
+
+
 
     @Override
 	public void stop() throws Exception {

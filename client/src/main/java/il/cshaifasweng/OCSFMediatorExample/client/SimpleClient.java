@@ -11,6 +11,8 @@ public class SimpleClient extends AbstractClient {
 	private static SimpleClient client = null;
 	public static String playerSymbol = "";  // "X" or "O"
 	public static boolean isMyTurn = false;
+	public static boolean init = false;
+
 
 	private SimpleClient(String host, int port) {
 		super(host, port);
@@ -41,22 +43,26 @@ public class SimpleClient extends AbstractClient {
 			else if(message.startsWith("TURN:")) {
 				Platform.runLater(() -> {
 					try {
-						PrimaryController.setWaiting(false);
-						PrimaryController.switchToSecondary();
+						if(!init) {
+							init = true;
+							PrimaryController.setWaiting(false);
+							PrimaryController.switchToSecondary();  // loads FXML + registers controller
+						}
+						// Post AFTER loading view so controller is registered
+						if (message.equals("TURN:YOUR")) {
+							isMyTurn = true;
+							EventBus.getDefault().post("It's your turn.");
+							System.out.println("It's your turn.");
+						} else if (message.equals("TURN:WAIT")) {
+							isMyTurn = false;
+							EventBus.getDefault().post("Waiting for opponent...");
+							System.out.println("Waiting for opponent...");
+						}
 
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
 				});
-				 if (message.equals("TURN:YOUR")) {
-					isMyTurn = true;
-					System.out.println("It's your turn.");
-					// Notify UI to allow move
-				} else if (message.equals("TURN:WAIT")) {
-					isMyTurn = false;
-					System.out.println("Waiting for opponent...");
-					// Notify UI to block input
-				}
 			}
 
 			else if (message.equals("RESET")) {
@@ -75,7 +81,10 @@ public class SimpleClient extends AbstractClient {
 				EventBus.getDefault().post(message);  // e.g., "score:1"
 			} else if (message.startsWith("update")) {
 				EventBus.getDefault().post(message);
-
+			} else if (message.startsWith("back")) {
+				init = false;
+				EventBus.getDefault().post("primary");
+				PrimaryController.setWaiting(true);
 			} else {
 				System.out.println("Unhandled message: " + message);
 			}

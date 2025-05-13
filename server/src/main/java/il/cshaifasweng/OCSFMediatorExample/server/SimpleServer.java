@@ -55,7 +55,14 @@ public class SimpleServer extends AbstractServer {
 					return;
 				}
 
-				String symbol = playerSymbols.size() == 0 ? "X" : "O";
+				String symbol;
+
+				if (playerSymbols.containsValue("X")) {
+					symbol = "O";
+				} else {
+					symbol = "X";
+				}
+
 				playerSymbols.put(client, symbol);
 				client.sendToClient("Role:" + symbol);
 
@@ -68,21 +75,33 @@ public class SimpleServer extends AbstractServer {
 			}
 		}
 		else if(msgString.startsWith("remove client")){
-			if(!SubscribersList.isEmpty()){
-				for(SubscribedClient subscribedClient: SubscribersList){
-					if(subscribedClient.getClient().equals(client)){
-						SubscribersList.remove(subscribedClient);
-						break;
-					}
+
+			gameStarted = false;
+
+			SubscribedClient toRemove = null;
+			for (SubscribedClient subscribedClient : SubscribersList) {
+				if (subscribedClient.getClient() == client) {
+					toRemove = subscribedClient;
+					break;
 				}
 			}
+
+			if (toRemove != null) {
+				SubscribersList.remove(toRemove);
+			}
+
+
 
 			playerScores.remove(client);
 			playerSymbols.remove(client);
 
-			System.out.println("Client removed. Remaining clients: " + SubscribersList.size());
+			if(playerSymbols.size() == 1){
+				sendToAllClients("back");
+			}
 
-			if (SubscribersList.isEmpty()) {
+			System.out.println("Client removed. Remaining clients: " + playerSymbols.size());
+
+			if (playerSymbols.isEmpty()) {
 				System.out.println("All clients disconnected. Shutting down server...");
 				try {
 					close();  // closes server socket and listening thread
@@ -125,14 +144,37 @@ public class SimpleServer extends AbstractServer {
 			try {
 				if (playerSymbols.size() == 2 && !gameStarted) {
 					gameStarted = true;
-					ArrayList<ConnectionToClient> players = new ArrayList<>(playerSymbols.keySet());
-					int rand = (int) (Math.random() * 2);
-					ConnectionToClient starter = players.get(rand);
-					ConnectionToClient other = players.get(1 - rand);
 
-					starter.sendToClient("TURN:YOUR");
-					other.sendToClient("TURN:WAIT");
-					System.out.println("Game started. Starter: " + playerSymbols.get(starter));
+					ArrayList<ConnectionToClient> players = new ArrayList<>(playerSymbols.keySet());
+					ConnectionToClient playerO = null;
+					ConnectionToClient playerX = null;
+
+					// Assign playerO and playerX based on the playerSymbols map
+					for (ConnectionToClient c : players) {
+						String symbol = playerSymbols.get(c);
+						if ("O".equals(symbol)) {
+							playerO = c;
+						} else if ("X".equals(symbol)) {
+							playerX = c;
+						}
+					}
+
+					if (playerO == null || playerX == null) {
+						System.err.println("Error: Could not identify players O and X");
+						return;
+					}
+
+					OTurn = true;  // O always starts
+
+					if (OTurn) {
+						playerO.sendToClient("TURN:YOUR");
+						playerX.sendToClient("TURN:WAIT");
+						System.out.println("Game started. Starter: O");
+					} else {
+						playerX.sendToClient("TURN:YOUR");
+						playerO.sendToClient("TURN:WAIT");
+						System.out.println("Game started. Starter: X");
+					}
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -142,17 +184,22 @@ public class SimpleServer extends AbstractServer {
 
 	private void handleMove(String msgString, ConnectionToClient client) {
 		String[] parts = msgString.trim().split(" ");
-		int row = Integer.parseInt(parts[2]);
-		int col = Integer.parseInt(parts[3]);
 
-		if (!isPlayerTurn(client)) return;
+		int row = Integer.parseInt(parts[1]);
+		int col = Integer.parseInt(parts[2]);
+
+		if (!isPlayerTurn(client)) {
+			System.out.println("not your turn");
+			return;
+		}
 		if (!isCellEmpty(row, col)) return;
 
-		String playerSymbol = OTurn ? "X" : "O";
+		String playerSymbol = OTurn ? "O" : "X";
 		board[row][col] = playerSymbol;
 
 		String nextPlayer = playerSymbol.equals("X") ? "O" : "X";
 		String updateMessage = "update board " + row + " " + col + " " + playerSymbol + " Turn " + nextPlayer;
+
 		sendToAllClients(updateMessage);
 
 		if (checkWin()) {
@@ -173,6 +220,21 @@ public class SimpleServer extends AbstractServer {
 			sendToAllClients("over " + row + " " + col + " " + playerSymbol);
 		} else {
 			OTurn = !OTurn;
+
+			// Notify whose turn it is
+			for (ConnectionToClient c : playerSymbols.keySet()) {
+				String role = playerSymbols.get(c);
+				try {
+					if ((OTurn && role.equals("O")) || (!OTurn && role.equals("X"))) {
+						c.sendToClient("TURN:YOUR");
+					} else {
+						c.sendToClient("TURN:WAIT");
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+
 		}
 	}
 
@@ -236,7 +298,7 @@ public class SimpleServer extends AbstractServer {
 
 		if (role == null) return false;
 
-		return (OTurn && role.equals("X")) || (!OTurn && role.equals("O"));
+		return (OTurn && role.equals("O")) || (!OTurn && role.equals("X"));
 	}
 
 

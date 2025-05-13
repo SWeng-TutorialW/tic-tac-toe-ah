@@ -6,7 +6,6 @@ import java.io.IOException;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
@@ -15,19 +14,25 @@ import org.greenrobot.eventbus.Subscribe;
 
 public class SecondaryController {
 
-    private String[][] board = new String[3][3];
-    private Button[][] buttons = new Button[3][3];
+    private final String[][] board = new String[3][3];
+    private final Button[][] buttons = new Button[3][3];
 
-    @FXML
-    private void switchToPrimary() throws IOException {
-        App.setRoot("primary");
-    }
 
     public SecondaryController(){
-        EventBus.getDefault().register(this);
     }
 
+
+    @FXML
     public void initialize() {
+
+
+        if (!EventBus.getDefault().isRegistered(this)) {
+            EventBus.getDefault().register(this);
+        }
+
+
+        System.out.println("Initializing SecondaryController");
+
         this.buttons[0][0] = this.Btn00;
         this.buttons[0][1] = this.Btn01;
         this.buttons[0][2] = this.Btn02;
@@ -48,8 +53,15 @@ public class SecondaryController {
         Button btn = (Button) event.getSource();
         String buttonID = btn.getId();
 
+        System.out.println("Button clicked: ID = " + buttonID + ", Text = " + btn.getText());
+
+
         int row = Character.getNumericValue(buttonID.charAt(3));
         int col = Character.getNumericValue(buttonID.charAt(4));
+
+        System.out.println("row = " + row + ", col = " + col);
+
+
 
         try{
             SimpleClient.getClient().sendToServer("choose " + row + " " + col);
@@ -70,35 +82,41 @@ public class SecondaryController {
     }
 
 
-    // handle all the messages from the server
+
     @Subscribe
-    public void handleMessage(Object msg) {
+    public void handleStringMessage(String messageText) {
         Platform.runLater(() -> {
-            if (msg instanceof String) {
-                String messageText = (String) msg;
-
-                if (messageText.startsWith("score:")) {
-                    String scoreText = messageText.substring(6);
-                    LabelScore.setText("Score: " + scoreText);  // assuming you have a scoreLabel
-                    return;
-                }
-
-
-                if (messageText.equals("RESET")) {
-                    clearGameBoard(); // 🧼 This resets the board visually
-                    LabelTurn.setText("New Game Started");
-                    return;
-                }
-
-                handleStatusMessage(messageText);
+            if (messageText.startsWith("score:")) {
+                String scoreText = messageText.substring(6);
+                LabelScore.setText("Score: " + scoreText);
+            } else if (messageText.equals("RESET")) {
+                clearGameBoard();
+                LabelTurn.setText("New Game Started");
+            } else if (messageText.startsWith("update")){
+                String[] splittedStr = messageText.split(" ");
+                int row = Integer.parseInt(splittedStr[2]);
+                int col = Integer.parseInt(splittedStr[3]);
+                handleMoveUpdate(new Object[]{row, col, splittedStr[4], splittedStr[6]});
+            } else if (messageText.equals("primary")) {
+                Platform.runLater(() -> {
+                    try {
+                        EventBus.getDefault().unregister(this);
+                        App.setRoot("primary");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+            } else {
+                LabelTurn.setText(messageText);
             }
+        });
+    }
 
-
-            if (msg instanceof Object[]) {
-                Object[] update = (Object[]) msg;
-                if (update.length >= 4) {
-                    handleMoveUpdate(update);
-                }
+    @Subscribe
+    public void handleObjectArrayMessage(Object[] update) {
+        Platform.runLater(() -> {
+            if (update.length >= 4) {
+                handleMoveUpdate(update);
             }
         });
     }
@@ -125,35 +143,45 @@ public class SecondaryController {
     }
 
     private void handleMoveUpdate(Object[] update) {
-        try {
-            int row = (Integer) update[0];
-            int col = (Integer) update[1];
-            String moveSymbol = (String) update[2];
-            String status = update[3].toString();
+            try {
+                int row = (Integer) update[0];
+                int col = (Integer) update[1];
+                String moveSymbol = (String) update[2];
+                String status = update[3].toString();
 
-            if (status.contains("OVER")) {
-                LabelTurn.setText(status);
-            } else {
-                LabelTurn.setText(status + "'s Turn");
+
+
+                if (status.contains("OVER")) {
+                    LabelTurn.setText(status);
+                } else {
+                    LabelTurn.setText(status + "'s Turn");
+                }
+
+                updateBoard(row, col, moveSymbol);
+            } catch (ClassCastException | IndexOutOfBoundsException e) {
+                System.err.println("Malformed move update received: " + e.getMessage());
             }
-
-            updateBoard(row, col, moveSymbol);
-        } catch (ClassCastException | IndexOutOfBoundsException e) {
-            System.err.println("Malformed move update received: " + e.getMessage());
-        }
     }
 
-    private void updateBoard(int row, int col, String moveSymbol) {
-        if (row < 0 || row >= 3 || col < 0 || col >= 3) {
-            System.err.println("Invalid board coordinates: " + row + ", " + col);
-            return;
-        }
 
-        Button button = buttons[row][col];
-        if (button != null && button.getText().isEmpty()) {
-            button.setText(moveSymbol);
-            button.setDisable(true);  // prevent further clicks
-        }
+
+    @FXML
+    private void updateBoard(int row, int col, String moveSymbol) {
+        Platform.runLater(() -> {
+
+            if (row < 0 || row >= 3 || col < 0 || col >= 3) {
+                System.err.println("Invalid board coordinates: " + row + ", " + col);
+                return;
+            }
+
+            Button button = buttons[row][col];
+
+            if (button != null && button.getText().isEmpty()) {
+                button.setText(moveSymbol);
+                button.setDisable(true);  // prevent further clicks
+            }
+
+        });
     }
 
 
