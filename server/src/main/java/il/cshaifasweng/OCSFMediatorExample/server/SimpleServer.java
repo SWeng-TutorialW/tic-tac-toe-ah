@@ -62,18 +62,6 @@ public class SimpleServer extends AbstractServer {
 				playerScores.put(client, 0);
 
 
-				if(playerSymbols.size() == 2 && !gameStarted){
-					gameStarted = true;
-					ArrayList<ConnectionToClient> players = new ArrayList<>(playerSymbols.keySet());
-					int rand = (int) (Math.random() * 2);
-					ConnectionToClient starter = players.get(rand);
-					ConnectionToClient other = players.get(1 - rand);
-
-					starter.sendToClient("TURN:YOUR");
-					other.sendToClient("TURN:WAIT");
-					System.out.println("Game started. Starter: " + playerSymbols.get(starter));
-				}
-
 				client.sendToClient("client added successfully");
 			} catch (IOException e) {
 				throw new RuntimeException(e);
@@ -91,6 +79,18 @@ public class SimpleServer extends AbstractServer {
 
 			playerScores.remove(client);
 			playerSymbols.remove(client);
+
+			System.out.println("Client removed. Remaining clients: " + SubscribersList.size());
+
+			if (SubscribersList.isEmpty()) {
+				System.out.println("All clients disconnected. Shutting down server...");
+				try {
+					close();  // closes server socket and listening thread
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				System.exit(0);  // optional: kill JVM
+			}
 
 		}else if (msgString.equals("reset game")) {
 			gameStarted = false;
@@ -121,6 +121,22 @@ public class SimpleServer extends AbstractServer {
 			}
 		}else if (msgString.startsWith("choose")) {
 			handleMove(msgString, client);
+		}else if(msgString.startsWith("ready")){
+			try {
+				if (playerSymbols.size() == 2 && !gameStarted) {
+					gameStarted = true;
+					ArrayList<ConnectionToClient> players = new ArrayList<>(playerSymbols.keySet());
+					int rand = (int) (Math.random() * 2);
+					ConnectionToClient starter = players.get(rand);
+					ConnectionToClient other = players.get(1 - rand);
+
+					starter.sendToClient("TURN:YOUR");
+					other.sendToClient("TURN:WAIT");
+					System.out.println("Game started. Starter: " + playerSymbols.get(starter));
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 

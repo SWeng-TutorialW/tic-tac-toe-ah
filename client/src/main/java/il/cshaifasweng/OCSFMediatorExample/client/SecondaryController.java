@@ -1,6 +1,6 @@
 package il.cshaifasweng.OCSFMediatorExample.client;
 
-import java.awt.event.ActionEvent;
+import javafx.event.ActionEvent;
 import java.io.IOException;
 
 
@@ -10,6 +10,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
+import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
 public class SecondaryController {
@@ -20,6 +21,10 @@ public class SecondaryController {
     @FXML
     private void switchToPrimary() throws IOException {
         App.setRoot("primary");
+    }
+
+    public SecondaryController(){
+        EventBus.getDefault().register(this);
     }
 
     public void initialize() {

@@ -27,6 +27,9 @@ public class App extends Application {
     @Override
     public void start(Stage stage) throws IOException {
 
+        EventBus.getDefault().register(this);
+
+
         TextInputDialog ipDialog = new TextInputDialog("127.0.0.1");
         ipDialog.setTitle("Server Connection");
         ipDialog.setHeaderText("Enter Server IP Address");
@@ -39,7 +42,7 @@ public class App extends Application {
             return;
         }
 
-        TextInputDialog portDialog = new TextInputDialog("3000");
+        TextInputDialog portDialog = new TextInputDialog("3001");
         portDialog.setTitle("Server Connection");
         portDialog.setHeaderText("Enter Server Port");
         portDialog.setContentText("Port:");

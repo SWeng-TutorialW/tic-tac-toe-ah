@@ -35,7 +35,7 @@ public class PrimaryController {
     }
 
 	@FXML
-	private void start(){
+	private void start(ActionEvent event){
 		try{
 			SimpleClient.getClient().sendToServer("ready");
 			setWaiting(true);
@@ -74,7 +74,7 @@ public class PrimaryController {
 
 
 	@FXML
-	private void switchToSecondary() throws IOException {
+	public static void switchToSecondary() throws IOException {
 		App.setRoot("secondary");
 	}
 
