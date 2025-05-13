@@ -53,15 +53,8 @@ public class SecondaryController {
         Button btn = (Button) event.getSource();
         String buttonID = btn.getId();
 
-        System.out.println("Button clicked: ID = " + buttonID + ", Text = " + btn.getText());
-
-
         int row = Character.getNumericValue(buttonID.charAt(3));
         int col = Character.getNumericValue(buttonID.charAt(4));
-
-        System.out.println("row = " + row + ", col = " + col);
-
-
 
         try{
             SimpleClient.getClient().sendToServer("choose " + row + " " + col);
